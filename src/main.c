@@ -15,6 +15,11 @@ int main(int argc, char** argv)
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_TEXTUREACCESS_TARGET);
     while(1)
     {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            if(event.type == SDL_QUIT) goto out;
+        }
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
@@ -27,6 +32,8 @@ int main(int argc, char** argv)
         SDL_RenderPresent(renderer);
     }
 
+    out:
+    
     SDL_DestroyWindow(window);
     return 0;
 }
