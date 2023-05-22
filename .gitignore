@@ -1,2 +1,6 @@
+#Binaries
 bin/main.exe
+
+#Misc files
 result.txt
+SDL2-devel-2.0.10=mingw.tar
