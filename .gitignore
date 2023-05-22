@@ -1,6 +1,9 @@
 #Binaries
 bin/main.exe
 
+#Build files
+build/*
+
 #Misc files
 result.txt
 SDL2-devel-2.0.10-mingw.tar

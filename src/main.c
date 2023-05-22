@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include "SDL2/SDL.h"
+#include "chip8.h"
 
 int main(int argc, char** argv)
 {
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Window* window = SDL_CreateWindow(
-        "CHIP-8 Window",
+        CHIP8_WINDOW_TITLE,
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        640, 320,
+        DISPLAY_WIDTH * DISPLAY_MULTIPLAYER, DISPLAY_WIDTH * DISPLAY_MULTIPLAYER,
         SDL_WINDOW_SHOWN
     );
 
@@ -33,7 +34,7 @@ int main(int argc, char** argv)
     }
 
     out:
-    
+
     SDL_DestroyWindow(window);
     return 0;
 }
