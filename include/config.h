@@ -11,4 +11,7 @@
 #define DISPLAY_HEIGHT 32
 #define DISPLAY_MULTIPLAYER 10
 
+// Chip-8 registers
+#define NO_OF_REGISTERS 16
+
 #endif // CONFIG_H
