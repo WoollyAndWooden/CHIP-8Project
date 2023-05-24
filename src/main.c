@@ -6,6 +6,12 @@ int main(int argc, char** argv)
 {
 
     struct chip8 chip8;
+    chip8.registers.stack_pointer = 0;
+    stack_push(&chip8, 0xff);
+    stack_push(&chip8, 0xaa);
+
+    printf("%x\n", stack_pop(&chip8));
+    printf("%x\n", stack_pop(&chip8));
 
     // Test
     chip8_memory_set(&chip8.memory, 0x400, 'Z');

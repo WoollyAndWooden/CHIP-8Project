@@ -14,4 +14,7 @@
 // Chip-8 registers
 #define NO_OF_REGISTERS 16
 
+// Chip-8 stack
+#define STACK_DEPTH 16
+
 #endif // CONFIG_H
