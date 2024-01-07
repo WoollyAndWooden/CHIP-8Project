@@ -2,7 +2,7 @@
 bin/main.exe
 
 #Build files
-build/*
+build/*.o
 
 #Misc files
 result.txt

@@ -17,4 +17,7 @@
 // Chip-8 stack
 #define STACK_DEPTH 16
 
+// Chip-8 keyboard
+#define TOTAL_KEYS 16
+
 #endif // CONFIG_H
