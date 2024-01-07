@@ -20,4 +20,7 @@
 // Chip-8 keyboard
 #define TOTAL_KEYS 16
 
+// Chip-8 character set
+#define CHARSET_LOAD_ADDRESS 0x00
+
 #endif // CONFIG_H
