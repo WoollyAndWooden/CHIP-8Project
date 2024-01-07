@@ -9,7 +9,7 @@
 // Chip-8 display resolution
 #define DISPLAY_WIDTH 64
 #define DISPLAY_HEIGHT 32
-#define DISPLAY_MULTIPLAYER 10
+#define DISPLAY_MULTIPLIER 10
 
 // Chip-8 registers
 #define NO_OF_REGISTERS 16

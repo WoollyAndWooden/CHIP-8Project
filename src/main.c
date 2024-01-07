@@ -15,12 +15,15 @@ int main(int argc, char** argv)
     struct chip8 chip8;
     chip8_init(&chip8);
 
+    chip8_display_draw_sprite(&chip8.display, 0, 0, &chip8.memory.memory[0x00], 5);
+    chip8_display_draw_sprite(&chip8.display, 2, 0, &chip8.memory.memory[0x00], 5);
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Window* window = SDL_CreateWindow(
         CHIP8_WINDOW_TITLE,
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        DISPLAY_WIDTH * DISPLAY_MULTIPLAYER, DISPLAY_HEIGHT * DISPLAY_MULTIPLAYER,
+        DISPLAY_WIDTH * DISPLAY_MULTIPLIER, 
+        DISPLAY_HEIGHT * DISPLAY_MULTIPLIER,
         SDL_WINDOW_SHOWN
     );
 
@@ -66,12 +69,22 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-        SDL_Rect r;
-        r.x = 0;
-        r.y = 0;
-        r.w = 40;
-        r.h = 40;
-        SDL_RenderDrawRect(renderer, &r);
+        for (int x = 0; x < DISPLAY_WIDTH; x++)
+        {
+            for (int y = 0; y < DISPLAY_HEIGHT; y++)
+            {
+                if (chip8_display_is_set(&chip8.display, x, y))
+                {
+                    SDL_Rect r;
+                    r.x = x * DISPLAY_MULTIPLIER;
+                    r.y = y * DISPLAY_MULTIPLIER;
+                    r.w = DISPLAY_MULTIPLIER;
+                    r.h = DISPLAY_MULTIPLIER;
+                    SDL_RenderFillRect(renderer, &r);
+                }
+            }
+        }
+        
         SDL_RenderPresent(renderer);
     }
 
