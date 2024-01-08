@@ -13,15 +13,37 @@ const char keyboard_map[TOTAL_KEYS] = {
 int main(int argc, char** argv)
 {
 
+
+    const char* filename = argv[1];
+    printf("Loading %s\n", filename);
+
+    FILE* f = fopen(filename, "rb");
+    if(!f)
+    {
+        printf("Failed to open %s\n", filename);
+        return -1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char buf[size];
+    int res = fread(buf, size, 1, f);
+    if (res != 1)
+    {
+        printf("Please provide a file to load.\n");
+        return -1;
+    }
+
     struct chip8 chip8;
     chip8_init(&chip8);
-    chip8.registers.sound_timer = 255;
+    chip8_load(&chip8, buf, size);
 
     chip8_display_draw_sprite(&chip8.display, 0, 0, &chip8.memory.memory[0x00], 5);
-    chip8_display_draw_sprite(&chip8.display, 2, 0, &chip8.memory.memory[0x00], 5);
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Window* window = SDL_CreateWindow(
-        CHIP8_WINDOW_TITLE,
+        WINDOW_TITLE,
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         DISPLAY_WIDTH * DISPLAY_MULTIPLIER, 
@@ -98,11 +120,14 @@ int main(int argc, char** argv)
         if (chip8.registers.sound_timer > 0)
         {
             Beep(15000, 100 * chip8.registers.sound_timer);
-            chip8.registers.sound_timer = 0;
-            
+            chip8.registers.sound_timer = 0;            
         }
 
+        
 
+        unsigned short opcode = chip8_memory_get_short(&chip8.memory, chip8.registers.program_counter);
+        chip8.registers.program_counter += 2;
+        chip8_exec(&chip8, opcode);
     }
 
     out:

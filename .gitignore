@@ -4,6 +4,9 @@ bin/main.exe
 #Build files
 build/*.o
 
+#Games
+Games/
+
 #Misc files
-result.txt
+*.txt
 SDL2-devel-2.0.10-mingw.tar

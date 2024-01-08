@@ -15,6 +15,7 @@ bool chip8_display_draw_sprite(struct chip8_display *display,
     int x, int y,
     const char *sprite, 
     int num);
+void chip8_display_clear(struct chip8_display *display);
 
 
 #endif // CHIP8_DISPLAY_H
