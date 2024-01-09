@@ -23,5 +23,6 @@
 
 // Chip-8 character set
 #define CHARSET_LOAD_ADDRESS 0x00
+#define DEFAULT_SPRITE_HEIGHT 5
 
 #endif // CONFIG_H

@@ -1,4 +1,5 @@
 #include "chip8.h"
+#include "SDL2/SDL.h"
 #include <memory.h>
 #include <assert.h>
 #include <string.h>
@@ -28,7 +29,7 @@ const char chip8_default_character_set[] = {
 void chip8_init(struct chip8 *chip8)
 {
     memset(chip8, 0, sizeof(struct chip8));
-    memcpy(chip8->memory.memory,  chip8_default_character_set, sizeof(chip8_default_character_set));
+    memcpy(&chip8->memory.memory,  chip8_default_character_set, sizeof(chip8_default_character_set));
 }
 
 // Bitwise operations to get values
@@ -51,6 +52,21 @@ static unsigned short get_kk(unsigned short opcode)
 static unsigned short get_last(unsigned short opcode)
 {
     return opcode & 0x000f;
+}
+
+static char chip8_wait_for_key_press(struct chip8 *chip8)
+{
+    SDL_Event event;
+    while(SDL_WaitEvent(&event))
+    {
+        if (event.type != SDL_KEYDOWN)
+            continue;
+        char c = event.key.keysym.sym;
+        char chip8_key = chip8_keyboard_map(&chip8->keyboard, c);
+        if (chip8_key != -1)
+            return chip8_key;
+        
+    }
 }
 
 // To avoid switch in switch, 0x8 instructions go here
@@ -81,50 +97,63 @@ static void chip8_exec_0x8(struct chip8 *chip8, unsigned short opcode)
 
         // ADD Vx, Vy: Vx = Vx + Vy, if > 255 set VF to 1, else 0.
         case 0x4:
-            if (chip8->registers.V[x] + chip8->registers.V[y] > 255)
-                chip8->registers.V[0xf] = 1;
+        {
+            bool check = chip8->registers.V[x] + chip8->registers.V[y] > 0xff;
+            chip8->registers.V[x] = chip8->registers.V[x] + chip8->registers.V[y];
+            if (check)
+                chip8->registers.V[0xf] = true;
             else
-                chip8->registers.V[0xf] = 0;
-            chip8->registers.V[x] = (chip8->registers.V[x] + chip8->registers.V[y]) & 0xff;
+                chip8->registers.V[0xf] = false;
+        }   
         break;
 
         // SUB Vx, Vy: If Vx > Vy, set VF to 1, else 0. Then Vx = Vx - Vy
         case 0x5:
-            if (chip8->registers.V[x] > chip8->registers.V[y])
-                chip8->registers.V[0xf] = 1;
-            else
-                chip8->registers.V[0xf] = 0;
+        {
+            bool check = chip8->registers.V[x] >= chip8->registers.V[y];
             chip8->registers.V[x] -= chip8->registers.V[y]; 
+            if (check)
+                chip8->registers.V[0xf] = true;
+            else
+                chip8->registers.V[0xf] = false;
+        }
         break;
 
         // SHR Vx {, Vy}: If the least-significant bit of Vx is 1, then VF is set to 1, else 0.
         // Then Vx is divided by 2.
         case 0x6:
-            if (get_last(chip8->registers.V[x]) == 1)
-                chip8->registers.V[0xf] = 1;
-            else
-                chip8->registers.V[0xf] = 0;
+        {
+            bool check = get_last(chip8->registers.V[x]) & 0b0001;
             chip8->registers.V[x] /= 2;
+            if (check)
+                chip8->registers.V[0xf] = true;
+            else
+                chip8->registers.V[0xf] = false;
+        }   
         break;
 
         // SUBN Vx , Vy: If Vy > Vx is 1, then VF is set to 1, else 0.
         // Then Vx = Vy - Vx.
         case 0x7:
-            if (chip8->registers.V[y] > chip8->registers.V[x])
-                chip8->registers.V[0xf] = 1;
+            chip8->registers.V[x] = chip8->registers.V[y] - chip8->registers.V[x];
+            if (chip8->registers.V[y] >= chip8->registers.V[x])
+                chip8->registers.V[0xf] = true;
             else
-                chip8->registers.V[0xf] = 0;
-            chip8->registers.V[x] = chip8->registers.V[y] - chip8->registers.V[x]; 
+                chip8->registers.V[0xf] = false;
+
         break;
 
         // SHL Vx {, Vy}: If the most-significant bit of Vx is 1, then VF is set to 1, else 0.
         // Then Vx is multiplied by 2.
         case 0xE:
-            if ((chip8->registers.V[x] & 0xf0) == 1)
-                chip8->registers.V[0xf] = 1;
-            else
-                chip8->registers.V[0xf] = 0;
+        {
+            bool check = chip8->registers.V[x] >> 7;
             chip8->registers.V[x] *= 2;
+            if (check)
+                chip8->registers.V[0xf] = true;
+            else
+                chip8->registers.V[0xf] = false;
+        }
         break;
         
     }
@@ -145,6 +174,10 @@ static void chip8_exec_0xF(struct chip8 *chip8, unsigned short opcode)
 
         // Fx0A - LD Vx, K: wait for a key press, then store value of key in Vx
         case 0x0A:
+        {
+            const char key = chip8_wait_for_key_press(chip8);
+            chip8->registers.V[x] = key;
+        }
         break;
 
         // Fx15 - LD DT, Vx: delay timer = Vx
@@ -164,23 +197,38 @@ static void chip8_exec_0xF(struct chip8 *chip8, unsigned short opcode)
 
         // LD F, Vx: I = location of sprite for Vx
         case 0x29:
-
+            chip8->registers.I = chip8->registers.V[x] * DEFAULT_SPRITE_HEIGHT;
         break;
 
 
-
-        // LD B, Vx: Store BCD representation of Vx in memory locations I, I+1 and I+2
+        // LD B, Vx: Store BCD representation of Vx in memory locations I (hundreds), I+1 (tens) and I+2 (units)
         case 0x33:
+            // hundreds
+            chip8_memory_set(&chip8->memory, chip8->registers.I, chip8->registers.V[x] / 100);
+            
+            // tens
+            chip8_memory_set(&chip8->memory, chip8->registers.I+1, chip8->registers.V[x] / 10 % 10);
+
+            // units
+            chip8_memory_set(&chip8->memory, chip8->registers.I+2, chip8->registers.V[x] % 10);
         break;
 
 
         // LD [I], Vx: Store registers through V0 to Vx in memory, starting at I
         case 0x55:
+            for(int i = 0; i <= x; i++)
+            {
+                chip8_memory_set(&chip8->memory, chip8->registers.I+i, chip8->registers.V[i]);
+            }
         break;
 
 
         // Fx65 - LD Vx, [I]: Read memory registers V0 through Vx starting at I
         case 0x65:
+            for(int i = 0; i <= x; i++)
+            {
+                chip8->registers.V[i] = chip8_memory_get(&chip8->memory, chip8->registers.I+i);
+            }
         break;
 
 
@@ -254,10 +302,9 @@ static void chip8_exec_extended(struct chip8 *chip8, unsigned short opcode)
 
         // Rnd Vx, kk: Vx = random byte AND kk
         case 0xC000:
-            time_t t;
-            srand((unsigned) time(&t));
+            srand(clock());
 
-            chip8->registers.V[get_x(opcode)] = (rand() % 256) & get_kk(opcode);
+            chip8->registers.V[get_x(opcode)] = (rand() % 255) & get_kk(opcode);
         
         // DRW Vx, Vy, nibble: Display n-byte starting at memory location I at (Vx, Vy), set VF = collision
         case 0xD000:
@@ -266,15 +313,12 @@ static void chip8_exec_extended(struct chip8 *chip8, unsigned short opcode)
             unsigned short x = get_x(opcode);
             unsigned short y = get_y(opcode);
             const char *sprite = &chip8->memory.memory[chip8->registers.I];
-            if (chip8_display_draw_sprite(
+            chip8_display_draw_sprite(
                 &chip8->display,
                 chip8->registers.V[x],
                 chip8->registers.V[y], 
                 sprite,
-                nibble))
-                chip8->registers.V[0xf] = 1;
-            else
-                chip8->registers.V[0xf] = 0;
+                nibble);
         }
         break;
 
@@ -295,8 +339,8 @@ static void chip8_exec_extended(struct chip8 *chip8, unsigned short opcode)
         }
 
         // There are several instructions under 0xF
-        case 0xF:
-
+        case 0xF000:
+            chip8_exec_0xF(chip8, opcode);
         break;
 
 
