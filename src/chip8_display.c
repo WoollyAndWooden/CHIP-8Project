@@ -2,6 +2,7 @@
 #include "chip8_memory.h"
 #include "config.h"
 #include <assert.h>
+#include <string.h>
 
 static void chip8_display_check_bounds(int x, int y)
 {

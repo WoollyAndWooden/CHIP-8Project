@@ -2,12 +2,13 @@
 #include <windows.h>
 #include "SDL2/SDL.h"
 #include "chip8.h"
+#include <time.h>
 
 const char keyboard_map[TOTAL_KEYS] = {
-    SDLK_0, SDLK_1, SDLK_2, SDLK_3,
-    SDLK_4, SDLK_5, SDLK_6, SDLK_7, 
-    SDLK_8, SDLK_9, SDLK_a, SDLK_b, 
-    SDLK_c, SDLK_d, SDLK_e, SDLK_f
+    SDLK_x, SDLK_1, SDLK_2, SDLK_3, // 0, 1, 2, 3
+    SDLK_q, SDLK_w, SDLK_e, SDLK_a, // 4, 5, 6, 7
+    SDLK_s, SDLK_d, SDLK_z, SDLK_c, // 8, 9, A, B
+    SDLK_4, SDLK_r, SDLK_f, SDLK_v  // C, D, E, F
 };
 
 int main(int argc, char** argv)
@@ -51,9 +52,13 @@ int main(int argc, char** argv)
         SDL_WINDOW_SHOWN
     );
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_TEXTUREACCESS_TARGET);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_TEXTUREACCESS_TARGET );
+
+    int count = 0;
     while(1)
     {
+        clock_t start, end;
+        double cpu_time_used;
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
@@ -86,36 +91,12 @@ int main(int argc, char** argv)
                 break;
             }
         }
-        while(SDL_PollEvent(&event))
-        {
-            if(event.type == SDL_QUIT) goto out;
-        }
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-        for (int x = 0; x < DISPLAY_WIDTH; x++)
-        {
-            for (int y = 0; y < DISPLAY_HEIGHT; y++)
-            {
-                if (chip8_display_is_set(&chip8.display, x, y))
-                {
-                    SDL_Rect r;
-                    r.x = x * DISPLAY_MULTIPLIER;
-                    r.y = y * DISPLAY_MULTIPLIER;
-                    r.w = DISPLAY_MULTIPLIER;
-                    r.h = DISPLAY_MULTIPLIER;
-                    SDL_RenderFillRect(renderer, &r);
-                }
-            }
-        }
         
-        SDL_RenderPresent(renderer);
-
+        start = clock();
+        
         if (chip8.registers.delay_timer > 0)
         {
-            Sleep(100);
             chip8.registers.delay_timer -= 1;
-            printf("Delay!\n");
         }
         if (chip8.registers.sound_timer > 0)
         {
@@ -128,6 +109,35 @@ int main(int argc, char** argv)
         unsigned short opcode = chip8_memory_get_short(&chip8.memory, chip8.registers.program_counter);
         chip8.registers.program_counter += 2;
         chip8_exec(&chip8, opcode);
+
+        if(++count == INSTRUCTIONS_PER_FRAME)
+        {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+            for (int x = 0; x < DISPLAY_WIDTH; x++)
+            {
+                for (int y = 0; y < DISPLAY_HEIGHT; y++)
+                {
+                    if (chip8_display_is_set(&chip8.display, x, y))
+                    {
+                        SDL_Rect r;
+                        r.x = x * DISPLAY_MULTIPLIER;
+                        r.y = y * DISPLAY_MULTIPLIER;
+                        r.w = DISPLAY_MULTIPLIER;
+                        r.h = DISPLAY_MULTIPLIER;
+                        SDL_RenderFillRect(renderer, &r);
+                    }
+                }
+            }
+
+
+            SDL_RenderPresent(renderer);
+            count = 0;
+        }
+        end = clock();
+        cpu_time_used = ((double)end - start) / CLOCKS_PER_SEC;
+        // printf("Rendered in %f \n", cpu_time_used);
     }
 
     out:
